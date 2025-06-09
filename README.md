@@ -20,9 +20,11 @@ A Model Context Protocol (MCP) server that provides cryptographically secure ran
 - **`random://dataset/{type}`** - Dynamic datasets (numbers, coordinates, colors, names)
 - **`wordlist://{filename}`** - Access EFF Diceware wordlists for passphrase generation
 
-### 📝 Prompts (2 available)
+### 📝 Prompts (4 available)
 - **`random-story-starter`** - Generate random story prompts by genre
 - **`random-writing-exercise`** - Create creative writing exercises by difficulty
+- **`diceware-security-guide`** - Generate security guidance for diceware passphrase creation and usage
+- **`password-policy-advisor`** - Generate advice for creating diceware-friendly password policies
 
 ## Security
 
