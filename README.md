@@ -4,7 +4,7 @@ A Model Context Protocol (MCP) server that provides cryptographically secure ran
 
 ## Features
 
-### 🔧 Tools (8 available)
+### 🔧 Tools (9 available)
 - **`random-number`** - Generate secure random integers within a range
 - **`random-decimal`** - Generate secure random decimal numbers with precision control
 - **`random-choice`** - Pick random items from a list (with or without duplicates)
@@ -13,6 +13,7 @@ A Model Context Protocol (MCP) server that provides cryptographically secure ran
 - **`roll-dice`** - Roll dice with custom sides and modifiers
 - **`generate-uuid`** - Generate cryptographically secure UUIDs (v4)
 - **`random-bytes`** - Generate raw cryptographic bytes in various encodings
+- **`diceware-passphrase`** - Generate secure passphrases using the Diceware method
 
 ### 📊 Resources (2 available)
 - **`random://facts/numbers`** - Static resource with random number facts
@@ -29,6 +30,21 @@ All randomness is **cryptographically secure** using Node.js `crypto` module:
 - Uses `crypto.randomBytes()` for floats and raw bytes
 - Uses `crypto.randomUUID()` for UUIDs
 - Suitable for security-sensitive applications
+
+### Diceware Passphrases
+
+The server includes support for generating secure passphrases using the [Diceware method](https://theworld.com/~reinhold/diceware.html):
+
+- **Method**: Generates cryptographically secure dice rolls (1-6) to select words from curated wordlists
+- **Wordlists**: Includes EFF wordlists optimized for memorability and security
+- **Security**: Each 4-word passphrase from the short list provides ~51 bits of entropy
+- **Memorability**: Uses common English words that are easy to remember and type
+
+Available wordlists:
+- `short_wordlist_unique_prefixes.txt` - 1296 words, unique 3-character prefixes (default)
+- `short_wordlist.txt` - 1296 words, standard EFF short list  
+- `large_wordlist.txt` - 7776 words, full EFF list for maximum security
+- `original_reinhold_wordlist.txt` - 7776 words, original Diceware list
 
 ## Installation
 
@@ -64,6 +80,12 @@ The server uses stdio transport, making it compatible with MCP clients that supp
 
 # Generate 32 random bytes in base64
 {"method": "tools/call", "params": {"name": "random-bytes", "arguments": {"size": 32, "encoding": "base64"}}}
+
+# Generate a 5-word diceware passphrase
+{"method": "tools/call", "params": {"name": "diceware-passphrase", "arguments": {"words": 5, "wordlist": "short_wordlist_unique_prefixes.txt", "capitalize": false}}}
+
+# Generate a 6-word capitalized passphrase using the large wordlist
+{"method": "tools/call", "params": {"name": "diceware-passphrase", "arguments": {"words": 6, "wordlist": "large_wordlist.txt", "capitalize": true}}}
 ```
 
 ### Example Resource Access
@@ -90,9 +112,15 @@ The server uses stdio transport, making it compatible with MCP clients that supp
 
 ```
 mcp-rando-server/
-├── server.ts       # Complete MCP server implementation
-├── package.json    # Node.js dependencies and scripts
-└── README.md       # This file
+├── server.ts         # Complete MCP server implementation
+├── package.json      # Node.js dependencies and scripts
+├── wordlists/        # EFF Diceware wordlists for passphrase generation
+│   ├── README.md     # Documentation about the wordlists
+│   ├── short_wordlist_unique_prefixes.txt  # 1296 words (4 dice) - default
+│   ├── short_wordlist.txt                  # 1296 words (4 dice)
+│   ├── large_wordlist.txt                  # 7776 words (5 dice)
+│   └── original_reinhold_wordlist.txt      # 7776 words (5 dice)
+└── README.md         # This file
 ```
 
 ## Requirements

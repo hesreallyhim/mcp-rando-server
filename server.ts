@@ -1,6 +1,9 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { randomBytes, randomInt, randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import { z } from "zod";
 import { CallToolResult, GetPromptResult, ReadResourceResult } from "@modelcontextprotocol/sdk/types.js";
 
@@ -43,6 +46,58 @@ function secureArrayShuffle<T>(array: T[]): T[] {
 function secureRandomChoice<T>(array: T[]): T {
   const index = secureRandomInt(0, array.length - 1);
   return array[index];
+}
+
+// ============================================================================
+// DICEWARE UTILITY FUNCTIONS
+// ============================================================================
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+/**
+ * Generate cryptographically secure dice rolls (1-6)
+ */
+function generateDiceRolls(numDice: number): string {
+  let result = "";
+  for (let i = 0; i < numDice; i++) {
+    result += secureRandomInt(1, 6).toString();
+  }
+  return result;
+}
+
+/**
+ * Load and parse a diceware wordlist file
+ */
+function loadWordlist(filename: string): Map<string, string> {
+  const wordlistPath = join(__dirname, "wordlists", filename);
+  const content = readFileSync(wordlistPath, "utf-8");
+  const wordMap = new Map<string, string>();
+  
+  const lines = content.trim().split("\n");
+  for (const line of lines) {
+    if (line.trim() === "") continue;
+    const parts = line.split("\t");
+    if (parts.length >= 2) {
+      const number = parts[1];
+      const word = parts[2];
+      if (number && word) {
+        wordMap.set(number, word);
+      }
+    }
+  }
+  
+  return wordMap;
+}
+
+/**
+ * Get the number of dice needed for a wordlist
+ */
+function getDiceCount(filename: string): number {
+  if (filename.includes("large") || filename.includes("reinhold")) {
+    return 5; // 7776 words = 6^5
+  }
+  return 4; // 1296 words = 6^4
 }
 
 // Create the MCP server
@@ -394,6 +449,74 @@ server.tool(
   }
 );
 
+// Generate diceware passphrase
+server.tool(
+  "diceware-passphrase",
+  "Generate a cryptographically secure diceware passphrase using word lists",
+  {
+    words: z.number().describe("Number of words in the passphrase").default(5),
+    wordlist: z.enum([
+      "short_wordlist_unique_prefixes.txt",
+      "short_wordlist.txt", 
+      "large_wordlist.txt",
+      "original_reinhold_wordlist.txt"
+    ]).describe("Wordlist to use").default("short_wordlist_unique_prefixes.txt"),
+    capitalize: z.boolean().describe("Capitalize first letter of each word").default(false),
+  },
+  async ({ words, wordlist, capitalize }): Promise<CallToolResult> => {
+    try {
+      // Load the wordlist
+      const wordMap = loadWordlist(wordlist);
+      const diceCount = getDiceCount(wordlist);
+      
+      // Generate words for the passphrase
+      const passphraseWords: string[] = [];
+      const diceRolls: string[] = [];
+      
+      for (let i = 0; i < words; i++) {
+        const roll = generateDiceRolls(diceCount);
+        diceRolls.push(roll);
+        
+        const word = wordMap.get(roll);
+        if (!word) {
+          return {
+            content: [{
+              type: "text",
+              text: `Error: No word found for dice roll ${roll} in wordlist ${wordlist}`
+            }],
+            isError: true
+          };
+        }
+        
+        const finalWord = capitalize 
+          ? word.charAt(0).toUpperCase() + word.slice(1)
+          : word;
+        
+        passphraseWords.push(finalWord);
+      }
+      
+      const passphrase = passphraseWords.join(" ");
+      const rollsDisplay = diceRolls.join(", ");
+      
+      return {
+        content: [{
+          type: "text",
+          text: `Diceware passphrase (${words} words from ${wordlist}):\n\n${passphrase}\n\nDice rolls used: ${rollsDisplay}\n\nThis passphrase was generated using cryptographically secure randomness.`
+        }]
+      };
+      
+    } catch (error) {
+      return {
+        content: [{
+          type: "text",
+          text: `Error generating diceware passphrase: ${error instanceof Error ? error.message : String(error)}`
+        }],
+        isError: true
+      };
+    }
+  }
+);
+
 // ============================================================================
 // RESOURCES: Pre-generated random data
 // ============================================================================
@@ -616,7 +739,7 @@ async function main() {
   const transport = new StdioServerTransport();
 
   console.error("Random Numbers MCP Server starting...");
-  console.error("Available tools: random-number, random-decimal, random-choice, shuffle-list, random-string, roll-dice, generate-uuid, random-bytes");
+  console.error("Available tools: random-number, random-decimal, random-choice, shuffle-list, random-string, roll-dice, generate-uuid, random-bytes, diceware-passphrase");
   console.error("Available resources: random://facts/numbers, random://dataset/{type}");
   console.error("Available prompts: random-story-starter, random-writing-exercise");
   console.error("All randomness is cryptographically secure using Node.js crypto module");
