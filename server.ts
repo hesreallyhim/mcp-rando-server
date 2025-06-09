@@ -549,6 +549,60 @@ server.resource(
   }
 );
 
+// Wordlist resources for diceware passphrases
+server.resource(
+  "wordlist",
+  "wordlist://{filename}",
+  { mimeType: "text/plain", description: "Access EFF Diceware wordlists for passphrase generation" },
+  async (uri, variables): Promise<ReadResourceResult> => {
+    const filename = (variables && typeof variables === "object" && "filename" in variables) ? (variables as any).filename : undefined;
+    
+    if (!filename) {
+      return {
+        contents: [{
+          uri: uri.href,
+          text: `Error: Missing filename. Available wordlists: short_wordlist_unique_prefixes.txt, short_wordlist.txt, large_wordlist.txt, original_reinhold_wordlist.txt`
+        }]
+      };
+    }
+
+    const validWordlists = [
+      "short_wordlist_unique_prefixes.txt",
+      "short_wordlist.txt", 
+      "large_wordlist.txt",
+      "original_reinhold_wordlist.txt"
+    ];
+
+    if (!validWordlists.includes(filename)) {
+      return {
+        contents: [{
+          uri: uri.href,
+          text: `Error: Invalid wordlist "${filename}". Available wordlists: ${validWordlists.join(", ")}`
+        }]
+      };
+    }
+
+    try {
+      const wordlistPath = join(__dirname, "wordlists", filename);
+      const content = readFileSync(wordlistPath, "utf-8");
+      
+      return {
+        contents: [{
+          uri: uri.href,
+          text: content
+        }]
+      };
+    } catch (error) {
+      return {
+        contents: [{
+          uri: uri.href,
+          text: `Error reading wordlist: ${error instanceof Error ? error.message : String(error)}`
+        }]
+      };
+    }
+  }
+);
+
 // Dynamic resource for random datasets
 server.resource(
   "random-dataset",
@@ -740,7 +794,7 @@ async function main() {
 
   console.error("Random Numbers MCP Server starting...");
   console.error("Available tools: random-number, random-decimal, random-choice, shuffle-list, random-string, roll-dice, generate-uuid, random-bytes, diceware-passphrase");
-  console.error("Available resources: random://facts/numbers, random://dataset/{type}");
+  console.error("Available resources: random://facts/numbers, random://dataset/{type}, wordlist://{filename}");
   console.error("Available prompts: random-story-starter, random-writing-exercise");
   console.error("All randomness is cryptographically secure using Node.js crypto module");
 

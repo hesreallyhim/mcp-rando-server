@@ -15,9 +15,10 @@ A Model Context Protocol (MCP) server that provides cryptographically secure ran
 - **`random-bytes`** - Generate raw cryptographic bytes in various encodings
 - **`diceware-passphrase`** - Generate secure passphrases using the Diceware method
 
-### 📊 Resources (2 available)
+### 📊 Resources (3 available)
 - **`random://facts/numbers`** - Static resource with random number facts
 - **`random://dataset/{type}`** - Dynamic datasets (numbers, coordinates, colors, names)
+- **`wordlist://{filename}`** - Access EFF Diceware wordlists for passphrase generation
 
 ### 📝 Prompts (2 available)
 - **`random-story-starter`** - Generate random story prompts by genre
@@ -96,6 +97,12 @@ The server uses stdio transport, making it compatible with MCP clients that supp
 
 # Get random coordinate dataset
 {"method": "resources/read", "params": {"uri": "random://dataset/coordinates"}}
+
+# Access a specific diceware wordlist
+{"method": "resources/read", "params": {"uri": "wordlist://short_wordlist_unique_prefixes.txt"}}
+
+# Access the large EFF wordlist
+{"method": "resources/read", "params": {"uri": "wordlist://large_wordlist.txt"}}
 ```
 
 ### Example Prompt Usage
