@@ -76,11 +76,12 @@ function loadWordlist(filename: string): Map<string, string> {
 
   const lines = content.trim().split("\n");
   for (const line of lines) {
+    // TODO: Refactor - brittle
     if (line.trim() === "") continue;
     const parts = line.split("\t");
-    if (parts.length >= 2) {
-      const number = parts[1];
-      const word = parts[2];
+    if (parts.length == 2) {
+      const number = parts[0];
+      const word = parts[1];
       if (number && word) {
         wordMap.set(number, word);
       }
