@@ -92,7 +92,7 @@ server.tool(
     return {
       content: [{
         type: "text",
-        text: count === 1 
+        text: count === 1
           ? `Cryptographically secure random number: ${numbers[0]}`
           : `Cryptographically secure random numbers: ${numbers.join(", ")}`
       }]
@@ -130,7 +130,7 @@ server.tool(
     return {
       content: [{
         type: "text",
-        text: count === 1 
+        text: count === 1
           ? `Cryptographically secure random decimal: ${numbers[0]}`
           : `Cryptographically secure random decimals: ${numbers.join(", ")}`
       }]
@@ -184,7 +184,7 @@ server.tool(
     return {
       content: [{
         type: "text",
-        text: count === 1 
+        text: count === 1
           ? `Cryptographically secure random choice: ${choices[0]}`
           : `Cryptographically secure random choices: ${choices.join(", ")}`
       }]
@@ -255,7 +255,7 @@ server.tool(
     return {
       content: [{
         type: "text",
-        text: count === 1 
+        text: count === 1
           ? `Cryptographically secure random string: ${strings[0]}`
           : `Cryptographically secure random strings: ${strings.join(", ")}`
       }]
@@ -298,7 +298,7 @@ server.tool(
     return {
       content: [{
         type: "text",
-        text: count === 1 
+        text: count === 1
           ? `Cryptographically secure roll 1d${sides}: ${rolls[0]}${modifierText}`
           : `Cryptographically secure roll ${count}d${sides}: [${rolls.join(", ")}] = ${finalTotal}${modifierText}`
       }]
@@ -318,8 +318,8 @@ server.tool(
     const uuids: string[] = [];
 
     for (let i = 0; i < count; i++) {
-      let uuid = randomUUID();
-      
+      let uuid: string = randomUUID();
+
       switch (format) {
         case "no-hyphens":
           uuid = uuid.replace(/-/g, "");
@@ -329,14 +329,14 @@ server.tool(
           break;
         // "standard" format needs no modification
       }
-      
+
       uuids.push(uuid);
     }
 
     return {
       content: [{
         type: "text",
-        text: count === 1 
+        text: count === 1
           ? `Generated UUID: ${uuids[0]}`
           : `Generated UUIDs: ${uuids.join(", ")}`
       }]
@@ -369,7 +369,7 @@ server.tool(
     for (let i = 0; i < count; i++) {
       const bytes = randomBytes(size);
       let encoded: string;
-      
+
       switch (encoding) {
         case "hex":
           encoded = bytes.toString("hex");
@@ -381,14 +381,14 @@ server.tool(
           encoded = bytes.toString("base64url");
           break;
       }
-      
+
       results.push(encoded);
     }
 
     return {
       content: [{
         type: "text",
-        text: count === 1 
+        text: count === 1
           ? `Generated ${size} random bytes (${encoding}): ${results[0]}`
           : `Generated ${size} random bytes each (${encoding}): ${results.join(", ")}`
       }]
@@ -434,11 +434,18 @@ server.resource(
   "random://dataset/{type}",
   { mimeType: "application/json", description: "Generate random datasets of various types" },
   async (uri, variables): Promise<ReadResourceResult> => {
-    const { type } = variables;
+    const type = (variables && typeof variables === "object" && "type" in variables) ? (variables as any).type : undefined;
     const size = 10; // Default dataset size
 
     let dataset: any[] = [];
-
+    if (!type) {
+      return {
+        contents: [{
+          uri: uri.href,
+          text: `Error: Missing dataset type. Available types: numbers, coordinates, colors, names`
+        }]
+      };
+    }
     switch (type) {
       case "numbers":
         dataset = Array.from({ length: size }, () => secureRandomInt(0, 999));
@@ -499,7 +506,7 @@ server.prompt(
   "Generate a random story starter prompt",
   {
     genre: z.enum(["fantasy", "scifi", "mystery", "romance", "adventure", "horror"])
-      .describe("Genre of the story").default("fantasy"),
+      .describe("Genre of the story").optional(),
     character: z.string().describe("Main character name").optional(),
   },
   async ({ genre, character }): Promise<GetPromptResult> => {
@@ -536,11 +543,13 @@ server.prompt(
       ]
     };
 
-    const storyStarters = starters[genre];
+    const genres = Object.keys(starters) as (keyof typeof starters)[];
+    const selectedGenre = genre ?? secureRandomChoice(genres);
+    const storyStarters = starters[selectedGenre];
     const randomStarter = secureRandomChoice(storyStarters);
-    
+
     const characterName = character || "the protagonist";
-    const prompt = `${randomStarter} Write a ${genre} story featuring ${characterName}. Focus on building atmosphere and introducing conflict early in the narrative.`;
+    const prompt = `${randomStarter} Write a ${selectedGenre} story featuring ${characterName}. Focus on building atmosphere and introducing conflict early in the narrative.`;
 
     return {
       messages: [{
@@ -558,10 +567,10 @@ server.prompt(
   "random-writing-exercise",
   "Generate a random creative writing exercise",
   {
-    difficulty: z.enum(["beginner", "intermediate", "advanced"]).describe("Difficulty level").default("intermediate"),
-    timeLimit: z.number().describe("Time limit in minutes").default(15).optional(),
+    difficulty: z.enum(["beginner", "intermediate", "advanced"]).describe("Difficulty level").optional(),
+    timeLimit: z.string().describe("Time limit in minutes").optional(),
   },
-  async ({ difficulty, timeLimit = 15 }): Promise<GetPromptResult> => {
+  async ({ difficulty, timeLimit }): Promise<GetPromptResult> => {
     const exercises = {
       beginner: [
         "Write about your favorite childhood memory using all five senses",
@@ -580,15 +589,20 @@ server.prompt(
       ]
     };
 
-    const exerciseList = exercises[difficulty];
+    const usedDifficulty = difficulty ?? "intermediate";
+    const exerciseList = exercises[usedDifficulty];
     const randomExercise = secureRandomChoice(exerciseList);
+
+    // Use default time limit of 15 if not provided or invalid
+    const timeLimitNum = Number(timeLimit ?? "15");
+    const timeLimitDisplay = isNaN(timeLimitNum) ? 15 : timeLimitNum;
 
     return {
       messages: [{
         role: "user",
         content: {
           type: "text",
-          text: `Creative Writing Exercise (${difficulty} - ${timeLimit} minutes):\n\n${randomExercise}\n\nSet a timer and begin writing immediately. Don't edit as you go - just let your creativity flow!`
+          text: `Creative Writing Exercise (${usedDifficulty} - ${timeLimitDisplay} minutes):\n\n${randomExercise}\n\nSet a timer and begin writing immediately. Don't edit as you go - just let your creativity flow!`
         }
       }]
     };
@@ -602,13 +616,13 @@ server.prompt(
 async function main() {
   // Use stdio transport for this example
   const transport = new StdioServerTransport();
-  
+
   console.error("Random Numbers MCP Server starting...");
   console.error("Available tools: random-number, random-decimal, random-choice, shuffle-list, random-string, roll-dice, generate-uuid, random-bytes");
   console.error("Available resources: random://facts/numbers, random://dataset/{type}");
   console.error("Available prompts: random-story-starter, random-writing-exercise");
   console.error("All randomness is cryptographically secure using Node.js crypto module");
-  
+
   await server.connect(transport);
   console.error("Random Numbers MCP Server running on stdio");
 }
