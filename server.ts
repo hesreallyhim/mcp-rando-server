@@ -1,4 +1,4 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { randomBytes, randomInt, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -73,7 +73,7 @@ function loadWordlist(filename: string): Map<string, string> {
   const wordlistPath = join(__dirname, "wordlists", filename);
   const content = readFileSync(wordlistPath, "utf-8");
   const wordMap = new Map<string, string>();
-  
+
   const lines = content.trim().split("\n");
   for (const line of lines) {
     if (line.trim() === "") continue;
@@ -86,7 +86,7 @@ function loadWordlist(filename: string): Map<string, string> {
       }
     }
   }
-  
+
   return wordMap;
 }
 
@@ -100,7 +100,7 @@ function getDiceCount(filename: string): number {
     "short_wordlist.txt": 4,
     "short_wordlist_unique_prefixes.txt": 4
   };
-  
+
   return diceCountMap[filename] ?? 4; // Default to 4 dice if filename not found
 }
 
@@ -461,7 +461,7 @@ server.tool(
     words: z.number().describe("Number of words in the passphrase").default(5),
     wordlist: z.enum([
       "short_wordlist_unique_prefixes.txt",
-      "short_wordlist.txt", 
+      "short_wordlist.txt",
       "large_wordlist.txt",
       "original_reinhold_wordlist.txt"
     ]).describe("Wordlist to use").default("short_wordlist_unique_prefixes.txt"),
@@ -472,15 +472,15 @@ server.tool(
       // Load the wordlist
       const wordMap = loadWordlist(wordlist);
       const diceCount = getDiceCount(wordlist);
-      
+
       // Generate words for the passphrase
       const passphraseWords: string[] = [];
       const diceRolls: string[] = [];
-      
+
       for (let i = 0; i < words; i++) {
         const roll = generateDiceRolls(diceCount);
         diceRolls.push(roll);
-        
+
         const word = wordMap.get(roll);
         if (!word) {
           return {
@@ -491,24 +491,24 @@ server.tool(
             isError: true
           };
         }
-        
-        const finalWord = capitalize 
+
+        const finalWord = capitalize
           ? word.charAt(0).toUpperCase() + word.slice(1)
           : word;
-        
+
         passphraseWords.push(finalWord);
       }
-      
+
       const passphrase = passphraseWords.join(" ");
       const rollsDisplay = diceRolls.join(", ");
-      
+
       return {
         content: [{
           type: "text",
           text: `Diceware passphrase (${words} words from ${wordlist}):\n\n${passphrase}\n\nDice rolls used: ${rollsDisplay}\n\nThis passphrase was generated using cryptographically secure randomness.`
         }]
       };
-      
+
     } catch (error) {
       return {
         content: [{
@@ -556,11 +556,31 @@ server.resource(
 // Wordlist resources for diceware passphrases
 server.resource(
   "wordlist",
-  "wordlist://{filename}",
-  { mimeType: "text/plain", description: "Access EFF Diceware wordlists for passphrase generation" },
-  async (uri, variables): Promise<ReadResourceResult> => {
-    const filename = (variables && typeof variables === "object" && "filename" in variables) ? (variables as any).filename : undefined;
-    
+  new ResourceTemplate("wordlist://{filename}", {
+    list: () => ({
+      resources: [
+        {
+          name: "Short Wordlist",
+          uri: "/wordlist/short_wordlist.txt"
+        },
+        {
+          name: "Short Wordlist Unique Prefixes",
+          uri: "/wordlist/short_wordlist_unique_prefixes.txt"
+        },
+        {
+          name: "Large Wordlist (EFF)",
+          uri: "/wordlist/large_wordlist.txt"
+        },
+        {
+          "name": "Original Reinhold Wordlist",
+          "uri": "/wordlists/original_reinhold_wordlist.txt"
+        }
+      ]
+    })
+  }),
+  async (uri, variables: any): Promise<ReadResourceResult> => {
+    const filename = variables?.filename;
+
     if (!filename) {
       return {
         contents: [{
@@ -572,7 +592,7 @@ server.resource(
 
     const validWordlists = [
       "short_wordlist_unique_prefixes.txt",
-      "short_wordlist.txt", 
+      "short_wordlist.txt",
       "large_wordlist.txt",
       "original_reinhold_wordlist.txt"
     ];
@@ -581,7 +601,7 @@ server.resource(
       return {
         contents: [{
           uri: uri.href,
-          text: `Error: Invalid wordlist "${filename}". Available wordlists: ${validWordlists.join(", ")}`
+          text: `Error: Invalid wordlist "${filename}".Available wordlists: ${validWordlists.join(", ")}`
         }]
       };
     }
@@ -589,7 +609,7 @@ server.resource(
     try {
       const wordlistPath = join(__dirname, "wordlists", filename);
       const content = readFileSync(wordlistPath, "utf-8");
-      
+
       return {
         contents: [{
           uri: uri.href,
@@ -610,8 +630,28 @@ server.resource(
 // Dynamic resource for random datasets
 server.resource(
   "random-dataset",
-  "random://dataset/{type}",
-  { mimeType: "application/json", description: "Generate random datasets of various types" },
+  new ResourceTemplate("random://dataset/{type}", {
+    list: () => ({
+      resources: [
+        {
+          name: "Random Numbers Dataset",
+          uri: "random://dataset/numbers"
+        },
+        {
+          name: "Random Coordinates Dataset",
+          uri: "random://dataset/coordinates"
+        },
+        {
+          name: "Random Colors Dataset",
+          uri: "random://dataset/colors"
+        },
+        {
+          name: "Random Names Dataset",
+          uri: "random://dataset/names"
+        }
+      ]
+    })
+  }),
   async (uri, variables): Promise<ReadResourceResult> => {
     const type = (variables && typeof variables === "object" && "type" in variables) ? (variables as any).type : undefined;
     const size = 10; // Default dataset size
@@ -728,7 +768,7 @@ server.prompt(
     const randomStarter = secureRandomChoice(storyStarters);
 
     const characterName = character || "the protagonist";
-    const prompt = `${randomStarter} Write a ${selectedGenre} story featuring ${characterName}. Focus on building atmosphere and introducing conflict early in the narrative.`;
+    const prompt = `${randomStarter} Write a ${selectedGenre} story featuring ${characterName}.Focus on building atmosphere and introducing conflict early in the narrative.`;
 
     return {
       messages: [{
@@ -781,7 +821,7 @@ server.prompt(
         role: "user",
         content: {
           type: "text",
-          text: `Creative Writing Exercise (${usedDifficulty} - ${timeLimitDisplay} minutes):\n\n${randomExercise}\n\nSet a timer and begin writing immediately. Don't edit as you go - just let your creativity flow!`
+          text: `Creative Writing Exercise(${usedDifficulty} - ${timeLimitDisplay} minutes): \n\n${randomExercise}\n\nSet a timer and begin writing immediately.Don't edit as you go - just let your creativity flow!`
         }
       }]
     };
@@ -803,13 +843,13 @@ server.prompt(
         use: "personal accounts, email, social media"
       },
       business: {
-        words: "5-6 words", 
+        words: "5-6 words",
         entropy: "64-77 bits",
         use: "work accounts, shared systems, team resources"
       },
       "high-security": {
         words: "6-8 words",
-        entropy: "77-103 bits", 
+        entropy: "77-103 bits",
         use: "cryptocurrency, financial accounts, critical infrastructure"
       }
     };
@@ -829,7 +869,7 @@ server.prompt(
     const securityTips = [
       "Generate passphrases offline when possible",
       "Verify the randomness source is cryptographically secure",
-      "Consider the physical security of your generation environment", 
+      "Consider the physical security of your generation environment",
       "Be aware of shoulder surfing when entering passphrases",
       "Use the EFF wordlists which are optimized for security and memorability"
     ];
@@ -867,7 +907,7 @@ Generate your secure passphrase using the diceware-passphrase tool with appropri
 );
 
 server.prompt(
-  "password-policy-advisor", 
+  "password-policy-advisor",
   "Generate advice for creating password policies that accommodate diceware passphrases",
   {
     organization: z.enum(["small-business", "enterprise", "government", "education"]).describe("Organization type").optional(),
@@ -880,7 +920,7 @@ server.prompt(
         recommendations: "4-5 word passphrases, password manager adoption"
       },
       enterprise: {
-        focus: "scalable security policies", 
+        focus: "scalable security policies",
         recommendations: "5-6 word passphrases, centralized password management"
       },
       government: {
@@ -970,7 +1010,7 @@ async function main() {
 
   console.error("Random Numbers MCP Server starting...");
   console.error("Available tools: random-number, random-decimal, random-choice, shuffle-list, random-string, roll-dice, generate-uuid, random-bytes, diceware-passphrase");
-  console.error("Available resources: random://facts/numbers, random://dataset/{type}, wordlist://{filename}");
+  console.error("Available resources: random://facts/numbers, resource templates for datasets and wordlists");
   console.error("Available prompts: random-story-starter, random-writing-exercise, diceware-security-guide, password-policy-advisor");
   console.error("All randomness is cryptographically secure using Node.js crypto module");
 
