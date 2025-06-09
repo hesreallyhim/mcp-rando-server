@@ -94,10 +94,14 @@ function loadWordlist(filename: string): Map<string, string> {
  * Get the number of dice needed for a wordlist
  */
 function getDiceCount(filename: string): number {
-  if (filename.includes("large") || filename.includes("reinhold")) {
-    return 5; // 7776 words = 6^5
-  }
-  return 4; // 1296 words = 6^4
+  const diceCountMap: Record<string, number> = {
+    "large_wordlist.txt": 5,
+    "original_reinhold_wordlist.txt": 5,
+    "short_wordlist.txt": 4,
+    "short_wordlist_unique_prefixes.txt": 4
+  };
+  
+  return diceCountMap[filename] ?? 4; // Default to 4 dice if filename not found
 }
 
 // Create the MCP server
