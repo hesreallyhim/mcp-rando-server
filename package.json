@@ -8,7 +8,7 @@
     "start": "tsx server.ts",
     "build": "tsc server.ts --outDir dist --target es2022 --module nodenext --moduleResolution nodenext",
     "dev": "tsx watch server.ts",
-    "test": "node tests/test-runner.js"
+    "test": "tsx tests/test-runner.ts"
   },
   "keywords": [
     "mcp",

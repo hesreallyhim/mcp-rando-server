@@ -5,14 +5,17 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { assertThrows } from './test-utils.js';
 
+// Type definition for loadWordlist function
+type LoadWordlist = (filename: string) => Map<string, string>;
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Extract loadWordlist function with proper file system context
-const loadWordlist = (filename) => {
+const loadWordlist: LoadWordlist = (filename: string): Map<string, string> => {
   const wordlistPath = join(__dirname, "..", "wordlists", filename);
   const content = readFileSync(wordlistPath, "utf-8");
-  const wordMap = new Map();
+  const wordMap = new Map<string, string>();
 
   const lines = content.trim().split("\n");
   for (const line of lines) {

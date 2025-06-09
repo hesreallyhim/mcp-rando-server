@@ -5,6 +5,28 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { assertInRange, assertArraysEqual, assertThrows } from './test-utils.js';
 
+// Type definitions for utility functions
+type SecureRandomInt = (min: number, max: number) => number;
+type SecureRandomFloat = (min: number, max: number) => number;
+type SecureArrayShuffle = <T>(array: T[]) => T[];
+type SecureRandomChoice = <T>(array: T[]) => T;
+type GenerateDiceRolls = (numDice: number) => string;
+type GetDiceCount = (filename: string) => number;
+
+interface UtilityFunctions {
+  secureRandomInt: SecureRandomInt;
+  secureRandomFloat: SecureRandomFloat;
+  secureArrayShuffle: SecureArrayShuffle;
+  secureRandomChoice: SecureRandomChoice;
+  generateDiceRolls: GenerateDiceRolls;
+  getDiceCount: GetDiceCount;
+}
+
+interface MockCrypto {
+  randomInt: (min: number, max: number) => number;
+  randomBytes: (size: number) => Buffer;
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const serverPath = join(__dirname, '..', 'server.ts');
@@ -17,9 +39,9 @@ const serverContent = readFileSync(serverPath, 'utf-8');
 const moduleExports = {};
 
 // Mock the crypto module for testing
-const mockCrypto = {
-  randomInt: (min, max) => Math.floor(Math.random() * (max - min)) + min,
-  randomBytes: (size) => {
+const mockCrypto: MockCrypto = {
+  randomInt: (min: number, max: number): number => Math.floor(Math.random() * (max - min)) + min,
+  randomBytes: (size: number): Buffer => {
     const buffer = Buffer.alloc(size);
     for (let i = 0; i < size; i++) {
       buffer[i] = Math.floor(Math.random() * 256);
@@ -104,7 +126,7 @@ const {
   secureRandomChoice,
   generateDiceRolls,
   getDiceCount
-} = moduleExports;
+} = moduleExports as UtilityFunctions;
 
 describe('Core Utility Functions', () => {
   
